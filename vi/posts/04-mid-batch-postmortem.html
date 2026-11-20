@@ -24,7 +24,7 @@
 <li><a href="#toi-rut-ra-gi">Tôi rút ra gì</a></li>
 </ul>
 </div>
-</details><p>Bảng kernel trong <a href="01-overview.html">bài tổng quan</a> có một vùng khó coi. Ở batch 1 đến 16 kernel sinh ra ngang Marlin; ở 512 hàng trở lên chúng đạt 85 phần trăm; nhưng ở <strong>32, 64, 128 và 256 hàng chúng chỉ bằng 88, 67, 69 và 76 phần trăm Marlin</strong>. Vùng này quan trọng trong thực tế: đó là thứ một server thấy khi có vài request đồng thời hoặc prompt ngắn. Bài này là cuộc điều tra. Kết luận không phải "đây là cách sửa"; nó là danh sách những thứ <em>không phải</em> nguyên nhân, kèm số đo.</p>
+</details><p>Bảng kernel trong <a href="01-overview.html">bài tổng quan</a> có một vùng khó coi. Ở batch 1 đến 16 kernel sinh ra ngang Marlin; ở 512 hàng trở lên chúng đạt 85 phần trăm; nhưng ở <strong>32, 64, 128 và 256 hàng chúng chỉ bằng 87, 67, 69 và 76 phần trăm Marlin</strong>. Vùng này quan trọng trong thực tế: đó là thứ một server thấy khi có vài request đồng thời hoặc prompt ngắn. Bài này là cuộc điều tra. Kết luận không phải "đây là cách sửa"; nó là danh sách những thứ <em>không phải</em> nguyên nhân, kèm số đo.</p>
 <table>
 <thead>
 <tr>
@@ -37,33 +37,33 @@
 <tbody>
 <tr>
 <td>32</td>
-<td style="text-align: right;">50.8</td>
-<td style="text-align: right;">57.8</td>
-<td style="text-align: right;">0.88</td>
+<td style="text-align: right;">50.9</td>
+<td style="text-align: right;">58.8</td>
+<td style="text-align: right;">0.87</td>
 </tr>
 <tr>
 <td>64</td>
-<td style="text-align: right;">58.6</td>
-<td style="text-align: right;">86.9</td>
+<td style="text-align: right;">58.3</td>
+<td style="text-align: right;">87.4</td>
 <td style="text-align: right;">0.67</td>
 </tr>
 <tr>
 <td>128</td>
-<td style="text-align: right;">104.1</td>
-<td style="text-align: right;">150.8</td>
+<td style="text-align: right;">105.1</td>
+<td style="text-align: right;">152.2</td>
 <td style="text-align: right;">0.69</td>
 </tr>
 <tr>
 <td>256</td>
-<td style="text-align: right;">198.7</td>
-<td style="text-align: right;">261.1</td>
+<td style="text-align: right;">201.0</td>
+<td style="text-align: right;">263.0</td>
 <td style="text-align: right;">0.76</td>
 </tr>
 </tbody>
 </table>
 <p>(K = N = 4096, group 128, weight từ DRAM.) Ở M = 64 khối lượng tính là 2.1 GFLOP, khoảng 47 micro giây ở 45 TFLOP/s mà cuBLAS đạt trên card này; Marlin làm trong 59.</p>
 <h2 id="gia-thuyet-1-schedule-sai">Giả thuyết 1: schedule sai<a class="headerlink" href="#gia-thuyet-1-schedule-sai" title="Permanent link">#</a></h2>
-<p>Với M từ 17 đến 64 phiên bản đầu dùng tile 64 hàng dành cho prefill. Một lần quét theo block tile M (16, 32, 64, 128), warp tile, K tile, stage và look-ahead (tới khoảng 190 cấu hình mỗi M) tìm được các cấu hình tốt hơn: cho 32 hàng là tile block 32 hàng với K tile sâu 128 (<strong>68.6 xuống 58.6 micro giây</strong>), cho 64 hàng là tile 64 hàng với warp tile 32 x 64 và look-ahead một tile (<strong>97 xuống 87 micro giây</strong>). Cả hai giờ là mặc định, và autotuner tìm trong cùng không gian đó. Điều này đưa M = 32 từ 0.75x lên 0.88x và M = 64 từ 0.61x lên 0.67x của Marlin. Sau đó các lần quét chạm trần: ở M = 64, tám cấu hình tốt nhất nằm trong khoảng 87 đến 94 micro giây. Tiling đã cạn.</p>
+<p>Với M từ 17 đến 64 phiên bản đầu dùng tile 64 hàng dành cho prefill. Một lần quét theo block tile M (16, 32, 64, 128), warp tile, K tile, stage và look-ahead (tới khoảng 190 cấu hình mỗi M) tìm được các cấu hình tốt hơn: cho 32 hàng là tile block 32 hàng với K tile sâu 128 (<strong>68.6 xuống 58.6 micro giây</strong>), cho 64 hàng là tile 64 hàng với warp tile 32 x 64 và look-ahead một tile (<strong>97 xuống 87 micro giây</strong>). Cả hai giờ là mặc định, và autotuner tìm trong cùng không gian đó. Điều này đưa M = 32 từ 0.75x lên 0.87x và M = 64 từ 0.61x lên 0.67x của Marlin. Sau đó các lần quét chạm trần: ở M = 64, tám cấu hình tốt nhất nằm trong khoảng 87 đến 94 micro giây. Tiling đã cạn.</p>
 <h2 id="gia-thuyet-2-khong-u-song-song">Giả thuyết 2: không đủ song song<a class="headerlink" href="#gia-thuyet-2-khong-u-song-song" title="Permanent link">#</a></h2>
 <p>Lưới cho M = 64 chỉ có 64 block trên 20 SM. Nếu thiếu việc là vấn đề thì thêm block phải giúp. Nhưng không: bài toán 64 x 1024 x 16384 có đúng số weight bằng 64 x 4096 x 4096 nhưng nhiều gấp bốn lần block (256 thay vì 64, mỗi block có một phần tư vòng lặp K), và nó chạy 110 micro giây so với 102. Thời gian đi theo lượng việc mỗi SM, không theo số SM rảnh. Block tile 16 hàng nhỏ hơn (nhiều gấp bốn lần block, nhưng lưu lượng weight gấp bốn vì mỗi block đọc lại weight) <em>chậm hơn</em> 30 phần trăm.</p>
 <h2 id="gia-thuyet-3-dram">Giả thuyết 3: DRAM<a class="headerlink" href="#gia-thuyet-3-dram" title="Permanent link">#</a></h2>
@@ -139,14 +139,14 @@
 <tr>
 <td>32</td>
 <td style="text-align: right;">57.3 us</td>
-<td style="text-align: right;">57.8 us</td>
-<td style="text-align: right;">50.8 us</td>
+<td style="text-align: right;">58.8 us</td>
+<td style="text-align: right;">50.9 us</td>
 </tr>
 <tr>
 <td>64</td>
 <td style="text-align: right;"><strong>75.8 us</strong></td>
-<td style="text-align: right;">86.9 us</td>
-<td style="text-align: right;">58.6 us</td>
+<td style="text-align: right;">87.4 us</td>
+<td style="text-align: right;">58.3 us</td>
 </tr>
 </tbody>
 </table>
